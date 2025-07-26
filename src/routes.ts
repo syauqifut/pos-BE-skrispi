@@ -1,10 +1,14 @@
 import { Router } from 'express';
 import authRoutes from './modules/auth/auth.routes';
+import inventoryRoutes from './modules/inventory/inventory.routes';
 
-const router = Router();
+const   router = Router();
 
 // Mount auth routes
 router.use('/auth', authRoutes);
+
+// Mount inventory routes
+router.use('/inventory', inventoryRoutes);
 
 // Health check endpoint
 router.get('/health', (req, res) => {
@@ -27,6 +31,13 @@ router.get('/', (req, res) => {
         login: 'POST /api/auth/login',
         verify: 'GET /api/auth/verify',
         logout: 'POST /api/auth/logout'
+      },
+      inventory: {
+        listProduct: 'GET /api/inventory/listProduct',
+        detailProduct: 'GET /api/inventory/detailProduct/:id',
+        addProduct: 'POST /api/inventory/addProduct',
+        updateProduct: 'PUT /api/inventory/updateProduct/:id',
+        deleteProduct: 'DELETE /api/inventory/deleteProduct/:id'
       },
       health: 'GET /api/health'
     }

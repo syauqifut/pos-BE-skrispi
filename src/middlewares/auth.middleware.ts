@@ -19,6 +19,7 @@ export const authenticateToken = (
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    console.log(token);
 
     if (!token) {
       throw new HttpException(401, 'Access token is required');
