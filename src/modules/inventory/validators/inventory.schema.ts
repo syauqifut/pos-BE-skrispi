@@ -29,8 +29,8 @@ export const productQuerySchema = z.object({
   search: z.string().optional(),
   category_id: z.string().transform((val) => parseInt(val)).pipe(z.number().int().positive()).optional(),
   stock_qty: z.string().transform((val) => parseInt(val)).pipe(z.number().int().positive()).optional(),
-  sort_by: z.string().optional(),
-  sort_order: z.enum(['ASC', 'DESC', 'asc', 'desc']).transform((val) => val.toUpperCase()).optional(),
+  sort_by: z.enum(['name', 'barcode']).optional().default('name'),
+  sort_order: z.enum(['ASC', 'DESC']).transform((val) => val.toUpperCase()).optional().default('ASC'),
   page: z.string().transform((val) => parseInt(val)).pipe(z.number().int().positive('Page must be a positive number')).optional(),
   limit: z.string().transform((val) => parseInt(val)).pipe(z.number().int().positive('Limit must be a positive number')).optional()
 });
@@ -38,6 +38,15 @@ export const productQuerySchema = z.object({
 // Schema for path parameters
 export const productParamsSchema = z.object({
   id: z.string().transform((val) => parseInt(val)).pipe(z.number().int().positive('Invalid product ID'))
+});
+
+// Schema for transaction query parameters
+export const transactionQuerySchema = z.object({
+  search: z.string().optional(),
+  sort_by: z.enum(['no', 'product_name', 'type', 'date', 'created_at']).optional().default('created_at'),
+  sort_order: z.enum(['ASC', 'DESC']).transform((val) => val.toUpperCase()).optional().default('DESC'),
+  page: z.string().transform((val) => parseInt(val)).pipe(z.number().int().positive('Page must be a positive number')).optional(),
+  limit: z.string().transform((val) => parseInt(val)).pipe(z.number().int().positive('Limit must be a positive number')).optional()
 });
 
 // Schema for purchase transaction with multiple items
@@ -62,5 +71,6 @@ export type CreateProductRequest = z.infer<typeof createProductSchema>;
 export type UpdateProductRequest = z.infer<typeof updateProductSchema>;
 export type ProductQueryRequest = z.infer<typeof productQuerySchema>;
 export type ProductParamsRequest = z.infer<typeof productParamsSchema>;
+export type TransactionQueryRequest = z.infer<typeof transactionQuerySchema>;
 export type PurchaseTransactionRequest = z.infer<typeof purchaseTransactionSchema>; 
 export type AdjustmentTransactionRequest = z.infer<typeof adjustmentTransactionSchema>;

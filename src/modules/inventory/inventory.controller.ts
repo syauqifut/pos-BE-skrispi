@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { FindAllOptions, InventoryService } from './inventory.service';
+import { FindAllOptions, TransactionQueryOptions, InventoryService } from './inventory.service';
 import { HttpException } from '../../exceptions/HttpException';
 import { 
   createProductSchema, 
@@ -9,8 +9,9 @@ import {
   CreateProductRequest,
   UpdateProductRequest,
   purchaseTransactionSchema,
-  adjustmentTransactionSchema
-} from './validators/product.schema';
+  adjustmentTransactionSchema,
+  transactionQuerySchema
+} from './validators/inventory.schema';
 
 export class InventoryController {
   private inventoryService: InventoryService;
@@ -32,10 +33,6 @@ export class InventoryController {
 
       if (validatedQuery.search) {
         options.search = validatedQuery.search;
-      }
-
-      if (validatedQuery.category_id) {
-        options.category_id = validatedQuery.category_id;
       }
 
       if (validatedQuery.sort_by) {
@@ -173,12 +170,39 @@ export class InventoryController {
    */
   findTransactionList = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const transactions = await this.inventoryService.findTransactionList();
+      // Validate query parameters with Zod
+      const validatedQuery = transactionQuerySchema.parse(req.query);
+
+      // Build options object
+      const options: TransactionQueryOptions = {};
+
+      if (validatedQuery.search) {
+        options.search = validatedQuery.search;
+      }
+
+      if (validatedQuery.sort_by) {
+        options.sort_by = validatedQuery.sort_by;
+      }
+
+      if (validatedQuery.sort_order) {
+        options.sort_order = validatedQuery.sort_order as 'ASC' | 'DESC';
+      }
+
+      if (validatedQuery.page) {
+        options.page = validatedQuery.page;
+      }
+
+      if (validatedQuery.limit) {
+        options.limit = validatedQuery.limit;
+      }
+
+      const transactions = await this.inventoryService.findTransactionList(options);
 
       res.status(200).json({
         success: true,
         message: 'Transactions retrieved successfully',
-        data: transactions
+        data: transactions.data,
+        pagination: transactions.pagination
       });
     } catch (error) {
       next(error);

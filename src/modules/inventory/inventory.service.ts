@@ -1,7 +1,7 @@
 import { HttpException } from '../../exceptions/HttpException';
 import pool from '../../db';
 import { inventoryQueries } from './inventory.sql';
-import { AdjustmentTransactionRequest, PurchaseTransactionRequest } from './validators/product.schema';
+import { AdjustmentTransactionRequest, PurchaseTransactionRequest } from './validators/inventory.schema';
 
 export interface Product {
   id: number;
@@ -45,6 +45,14 @@ export interface UpdateProductRequest {
 export interface FindAllOptions {
   search?: string;
   category_id?: number;
+  sort_by?: string;
+  sort_order?: 'ASC' | 'DESC';
+  page?: number;
+  limit?: number;
+}
+
+export interface TransactionQueryOptions {
+  search?: string;
   sort_by?: string;
   sort_order?: 'ASC' | 'DESC';
   page?: number;
@@ -124,10 +132,7 @@ export class InventoryService {
       paramCount++;
       conditions.push(`(
         p.name ILIKE $${paramCount} OR 
-        p.sku ILIKE $${paramCount} OR 
-        p.barcode ILIKE $${paramCount} OR
-        c.name ILIKE $${paramCount} OR
-        m.name ILIKE $${paramCount}
+        p.barcode ILIKE $${paramCount}
       )`);
       values.push(`%${options.search}%`);
     }
@@ -155,10 +160,23 @@ export class InventoryService {
     const sortOrder = options.sort_order || 'ASC';
     
     // Validate sort_by field to prevent SQL injection
-    const allowedSortFields = ['name', 'created_at', 'updated_at', 'barcode'];
+    const allowedSortFields = ['name', 'barcode'];
     const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'name';
+    let orderByField: string;
+    switch (safeSortBy) {
+      case 'name':
+        orderByField = 'LOWER(p.name)';
+        break;
+      case 'barcode':
+        orderByField = 'LOWER(p.barcode)';
+        break;
+      default:
+        orderByField = 'LOWER(p.name)';
+        break;
+    }
     
-    return `ORDER BY p.${safeSortBy} ${sortOrder}`;
+    
+    return `ORDER BY ${orderByField} ${sortOrder}`;
   }
 
   /**
@@ -441,11 +459,104 @@ export class InventoryService {
   }
 
   /**
-   * Get all transactions
+   * Build dynamic WHERE clause for transaction search and filters
    */
-  async findTransactionList(): Promise<Transaction[]> {
-    const result = await pool.query(inventoryQueries.findTransactionList);
-    return result.rows.map(row => this.transformTransaction(row));
+  private buildTransactionWhereClause(options: TransactionQueryOptions): { whereClause: string; values: any[] } {
+    const conditions: string[] = [];
+    const values: any[] = [];
+    let paramCount = 0;
+
+    // Search functionality
+    if (options.search) {
+      paramCount++;
+      conditions.push(`(
+        t.no ILIKE $${paramCount} OR 
+        p.name ILIKE $${paramCount} OR
+        t.type ILIKE $${paramCount}
+      )`);
+      values.push(`%${options.search}%`);
+    }
+
+    return {
+      whereClause: conditions.length > 0 ? conditions.join(' AND ') : '1=1',
+      values
+    };
+  }
+
+  /**
+   * Build ORDER BY clause for transactions
+   */
+  private buildTransactionOrderClause(options: TransactionQueryOptions): string {
+    const sortBy = options.sort_by || 'created_at';
+    const sortOrder = options.sort_order || 'DESC';
+    
+    // Validate sort_by field to prevent SQL injection
+    const allowedSortFields = ['no', 'product_name', 'type', 'date', 'created_at'];
+    const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'created_at';
+    let orderByField: string;
+    
+    switch (safeSortBy) {
+      case 'no':
+        orderByField = 't.no';
+        break;
+      case 'product_name':
+        orderByField = 'LOWER(p.name)';
+        break;
+      case 'type':
+        orderByField = 'LOWER(t.type)';
+        break;
+      case 'date':
+        orderByField = 't.date';
+        break;
+      case 'created_at':
+        orderByField = 's.created_at';
+        break;
+      default:
+        orderByField = 's.created_at';
+        break;
+    }
+    
+    return `ORDER BY ${orderByField} ${sortOrder}`;
+  }
+
+  /**
+   * Get all transactions with search, sort, and pagination
+   */
+  async findTransactionList(options: TransactionQueryOptions = {}): Promise<PaginatedResult<Transaction>> {
+    try {
+      const page = options.page || 1;
+      const limit = options.limit || Number.MAX_SAFE_INTEGER;
+      const offset = (page - 1) * limit;
+
+      const { whereClause, values } = this.buildTransactionWhereClause(options);
+      const orderClause = this.buildTransactionOrderClause(options);
+
+      // Build final query
+      const baseQuery = inventoryQueries.findTransactionList;
+      const finalQuery = `${baseQuery} WHERE ${whereClause} ${orderClause} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+
+      // Get total count for pagination
+      const countQuery = `${inventoryQueries.countAllTransactions} WHERE ${whereClause}`;
+      const countResult = await pool.query(countQuery, values);
+      const total = parseInt(countResult.rows[0].total);
+
+      // Get paginated results
+      const result = await pool.query(finalQuery, [...values, limit, offset]);
+      const transactions = result.rows.map(row => this.transformTransaction(row));
+
+      return {
+        data: transactions,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      throw new HttpException(500, 'Internal server error while fetching transactions');
+    }
   }
 
   /**

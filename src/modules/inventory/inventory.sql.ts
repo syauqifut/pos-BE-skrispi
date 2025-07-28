@@ -177,6 +177,15 @@ export const inventoryQueries = {
     LEFT JOIN users u ON s.created_by = u.id
   `,
 
+  // Count total transactions for pagination
+  countAllTransactions: `
+    SELECT COUNT(*) as total
+    FROM stocks s
+    LEFT JOIN transactions t ON s.transaction_id = t.id
+    LEFT JOIN products p ON s.product_id = p.id
+    LEFT JOIN users u ON s.created_by = u.id
+  `,
+
   // Purchase transaction
   purchaseTransaction: `
     INSERT INTO stocks (product_id, transaction_id, type, qty, unit_id, description, created_by) 
