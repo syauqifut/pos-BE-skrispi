@@ -66,6 +66,11 @@ export const adjustmentTransactionSchema = z.object({
   description: z.string().min(1, 'Description cannot be empty').trim()
 });
 
+// Schema for deleting multiple products
+export const deleteProductMultipleSchema = z.object({
+  ids: z.array(z.string().transform((val) => parseInt(val)).pipe(z.number().int().positive('Invalid product ID')))
+});
+
 // Export types
 export type CreateProductRequest = z.infer<typeof createProductSchema>;
 export type UpdateProductRequest = z.infer<typeof updateProductSchema>;

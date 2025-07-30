@@ -10,8 +10,14 @@ import {
   UpdateProductRequest,
   purchaseTransactionSchema,
   adjustmentTransactionSchema,
-  transactionQuerySchema
+  transactionQuerySchema,
+  deleteProductMultipleSchema
 } from './validators/inventory.schema';
+
+// Extend Request interface to include file from multer
+interface RequestWithFile extends Request {
+  file?: Express.Multer.File;
+}
 
 export class InventoryController {
   private inventoryService: InventoryService;
@@ -159,6 +165,69 @@ export class InventoryController {
         success: true,
         message: 'Product deleted successfully',
         data: product
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Handle DELETE /inventory/deleteProductMultiple
+   */
+  deleteMultiple = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // Validate request body with Zod
+      const validatedData = deleteProductMultipleSchema.parse(req.body);
+
+      // Get user ID from auth middleware
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new HttpException(401, 'User authentication required');
+      }
+
+      const products = await this.inventoryService.deleteMultiple(validatedData.ids, userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Products deleted successfully',
+        data: products
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Handle POST /inventory/uploadProductImage/:id
+   */
+  uploadProductImage = async (req: RequestWithFile, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // Validate path parameters with Zod
+      const validatedParams = productParamsSchema.parse(req.params);
+
+      // Get user ID from auth middleware
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new HttpException(401, 'User authentication required');
+      }
+
+      // Check if file was uploaded
+      if (!req.file) {
+        throw new HttpException(400, 'No image file uploaded');
+      }
+
+      const imageUrl = await this.inventoryService.uploadProductImage(
+        validatedParams.id, 
+        req.file.filename, 
+        userId
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Product image uploaded successfully',
+        data: {
+          imageUrl
+        }
       });
     } catch (error) {
       next(error);

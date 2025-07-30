@@ -12,12 +12,13 @@ export interface Product {
   unit_id?: string;
   is_active: boolean;
   stock_qty: number;
+  purchase_price: number;
+  selling_price: number;
   created_at: Date;
   updated_at: Date;
   created_by: number;
   updated_by: number;
   stock_history: any[];
-  price: any;
 }
 
 export interface CreateProductRequest {
@@ -99,7 +100,8 @@ export class InventoryService {
       created_by: row.created_by,
       updated_by: row.updated_by,
       stock_history: row.stock_history,
-      price: row.price
+      purchase_price: row.purchase_price,
+      selling_price: row.selling_price
     };
   }
 
@@ -235,7 +237,6 @@ export class InventoryService {
       return {
         ...this.transformProduct(result.rows[0]),
         stock_history: stockHistoryResult.rows,
-        price: priceResult.rows[0]
       };
     } catch (error) {
       if (error instanceof HttpException) {
@@ -402,7 +403,7 @@ export class InventoryService {
       const currentProduct = await this.findById(id);
 
       const transactionResult = await pool.query(inventoryQueries.findTransactionByProductId, [id]);
-      if (transactionResult.rows.length > 0) {
+      if (transactionResult.rows.length > 1) {
         throw new HttpException(400, 'Product is used in transaction');
       }
 
@@ -420,6 +421,48 @@ export class InventoryService {
       }
       console.error('Error deleting product:', error);
       throw new HttpException(500, 'Internal server error while deleting product');
+    }
+  }
+
+  /**
+   * Soft delete multiple products
+   */
+  async deleteMultiple(ids: number[], userId: number): Promise<Product[]> {
+    try {
+      const products = await Promise.all(ids.map(id => this.delete(id, userId)));
+      return products;
+    }
+    catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      console.error('Error deleting multiple products:', error);
+      throw new HttpException(500, 'Internal server error while deleting multiple products');
+    }
+  }
+
+  /**
+   * Upload product image and return image URL (does not update database)
+   */
+  async uploadProductImage(productId: number, filename: string, userId: number): Promise<string> {
+    try {
+      // Check if product exists
+      const product = await this.findById(productId);
+      if (!product) {
+        throw new HttpException(404, 'Product not found');
+      }
+
+      // Generate image URL
+      const imageUrl = `/pictures/${productId}/${filename}`;
+
+      // Return only the image URL
+      return imageUrl;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      console.error('Error uploading product image:', error);
+      throw new HttpException(500, 'Internal server error while uploading product image');
     }
   }
 

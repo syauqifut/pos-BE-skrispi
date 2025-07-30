@@ -17,11 +17,14 @@ export const inventoryQueries = {
       p.updated_at,
       p.created_by,
       p.updated_by,
-      SUM(s.qty) as stock_qty
+      SUM(s.qty) as stock_qty,
+      pr.purchase_price,
+      pr.selling_price
     FROM products p
     LEFT JOIN stocks s ON p.id = s.product_id
+    LEFT JOIN prices pr ON p.id = pr.product_id
     WHERE p.is_active = true
-    GROUP BY p.id, p.name, p.barcode, p.image_url, p.is_active, p.category_id, p.unit_id, p.created_at, p.updated_at, p.created_by, p.updated_by
+    GROUP BY p.id, p.name, p.barcode, p.image_url, p.is_active, p.category_id, p.unit_id, p.created_at, p.updated_at, p.created_by, p.updated_by, pr.purchase_price, pr.selling_price
   `,
 
   // Get product by ID with joins
@@ -38,11 +41,14 @@ export const inventoryQueries = {
       p.updated_at,
       p.created_by,
       p.updated_by,
-      SUM(s.qty) as stock_qty
+      SUM(s.qty) as stock_qty,
+      pr.purchase_price,
+      pr.selling_price
     FROM products p
     LEFT JOIN stocks s ON p.id = s.product_id
+    LEFT JOIN prices pr ON p.id = pr.product_id
     WHERE p.id = $1 AND p.is_active = true
-    GROUP BY p.id, p.name, p.barcode, p.image_url, p.is_active, p.category_id, p.unit_id, p.created_at, p.updated_at, p.created_by, p.updated_by
+    GROUP BY p.id, p.name, p.barcode, p.image_url, p.is_active, p.category_id, p.unit_id, p.created_at, p.updated_at, p.created_by, p.updated_by, pr.purchase_price, pr.selling_price
   `,
 
   // Create new product

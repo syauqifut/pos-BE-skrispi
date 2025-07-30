@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { InventoryController } from './inventory.controller';
 import { authenticateToken } from '../../middlewares/auth.middleware';
+import { uploadProductImage, handleUploadError } from '../../middlewares/upload.middleware';
 
 const router = Router();
 const inventoryController = new InventoryController();
@@ -41,6 +42,13 @@ router.put('/updateProduct/:id', authenticateToken, inventoryController.update);
 router.delete('/deleteProduct/:id', authenticateToken, inventoryController.delete);
 
 /**
+ * @route   DELETE /inventory/deleteProductMultiple
+ * @desc    Soft delete multiple products
+ * @access  Private (requires authentication)
+ */
+router.delete('/deleteProduct', authenticateToken, inventoryController.deleteMultiple);
+
+/**
  * @route   GET /inventory/transactionList
  * @desc    Get all transactions
  * @access  Private (requires authentication)
@@ -61,5 +69,17 @@ router.post('/purchaseTransaction', authenticateToken, inventoryController.purch
  */
 router.post('/adjustmentTransaction', authenticateToken, inventoryController.adjustmentTransaction);
 
+/**
+ * @route   POST /inventory/uploadProductImage/:id
+ * @desc    Upload product image
+ * @access  Private (requires authentication)
+ */
+router.post(
+  '/uploadProductImage/:id', 
+  authenticateToken, 
+  uploadProductImage.single('image'),
+  handleUploadError,
+  inventoryController.uploadProductImage
+);
 
 export default router; 
