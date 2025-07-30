@@ -21,6 +21,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files from public directory
 app.use('/pictures', express.static('public/pictures'));
+app.use('/qrispictures', express.static('public/qrispictures'));
 
 // Request logging middleware
 app.use((req, res, next) => {

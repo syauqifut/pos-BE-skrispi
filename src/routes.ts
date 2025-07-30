@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import authRoutes from './modules/auth/auth.routes';
 import inventoryRoutes from './modules/inventory/inventory.routes';
+import cashierRoutes from './modules/cashier/cashier.routes';
 
 const   router = Router();
 
@@ -9,6 +10,9 @@ router.use('/auth', authRoutes);
 
 // Mount inventory routes
 router.use('/inventory', inventoryRoutes);
+
+// Mount cashier routes
+router.use('/cashier', cashierRoutes);
 
 // Health check endpoint
 router.get('/health', (req, res) => {
@@ -38,6 +42,9 @@ router.get('/', (req, res) => {
         addProduct: 'POST /api/inventory/addProduct',
         updateProduct: 'PUT /api/inventory/updateProduct/:id',
         deleteProduct: 'DELETE /api/inventory/deleteProduct/:id'
+      },
+      cashier: {
+        showQris: 'GET /api/cashier/showQris'
       },
       health: 'GET /api/health'
     }
