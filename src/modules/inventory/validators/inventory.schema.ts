@@ -71,6 +71,11 @@ export const deleteProductMultipleSchema = z.object({
   ids: z.array(z.string().transform((val) => parseInt(val)).pipe(z.number().int().positive('Invalid product ID')))
 });
 
+// Schema for transaction detail path parameters
+export const transactionDetailParamsSchema = z.object({
+  id: z.string().transform((val) => parseInt(val)).pipe(z.number().int().positive('Invalid transaction ID'))
+});
+
 // Export types
 export type CreateProductRequest = z.infer<typeof createProductSchema>;
 export type UpdateProductRequest = z.infer<typeof updateProductSchema>;

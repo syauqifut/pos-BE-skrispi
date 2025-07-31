@@ -76,9 +76,28 @@ export interface Transaction {
   product_name: string;
   type: string;
   date: Date;
+}
+
+export interface TransactionItem {
+  id: number;
+  product_id: number;
+  product_name: string;
+  unit_id: string;
+  qty: number;
+  description: string;
+}
+
+export interface TransactionDetail {
+  id: number;
+  no: string;
+  type: string;
+  date: Date;
   description: string;
   created_at: Date;
   created_by: number;
+  updated_at: Date;
+  updated_by: number;
+  items: TransactionItem[];
 }
 
 export class InventoryService {
@@ -114,10 +133,29 @@ export class InventoryService {
       no: row.no,
       product_name: row.product_name,
       type: row.type,
-      date: row.date,
-      description: row.description,
-      created_at: row.created_at,
-      created_by: row.created_by
+      date: row.date
+    };
+  }
+
+  private transformTransactionDetail(transactionRow: any, itemsRows: any[]): TransactionDetail {
+    return {
+      id: transactionRow.id,
+      no: transactionRow.no,
+      type: transactionRow.type,
+      date: transactionRow.date,
+      description: transactionRow.description,
+      created_at: transactionRow.created_at,
+      created_by: transactionRow.created_by,
+      updated_at: transactionRow.updated_at,
+      updated_by: transactionRow.updated_by,
+      items: itemsRows.map(item => ({
+        id: item.id,
+        product_id: item.product_id,
+        product_name: item.product_name,
+        unit_id: item.unit_id,
+        qty: item.qty,
+        description: item.description
+      }))
     };
   }
 
@@ -408,6 +446,9 @@ export class InventoryService {
       }
 
       const result = await pool.query(inventoryQueries.softDelete, [id, userId]);
+      
+      // revert current product stock
+      const stockResult = await pool.query(inventoryQueries.insertStock, [id, transactionResult.rows[0].id, 'adjustment', currentProduct.stock_qty * (-1), currentProduct.unit_id, 'Revert stock for ' + currentProduct.name, userId]);
 
       if (result.rows.length === 0) {
         throw new HttpException(404, 'Product not found or already deleted');
@@ -444,16 +485,10 @@ export class InventoryService {
   /**
    * Upload product image and return image URL (does not update database)
    */
-  async uploadProductImage(productId: number, filename: string, userId: number): Promise<string> {
+  async uploadProductImage(filename: string, userId: number): Promise<string> {
     try {
-      // Check if product exists
-      const product = await this.findById(productId);
-      if (!product) {
-        throw new HttpException(404, 'Product not found');
-      }
-
       // Generate image URL
-      const imageUrl = `/pictures/${productId}/${filename}`;
+      const imageUrl = `/pictures/products/${filename}`;
 
       // Return only the image URL
       return imageUrl;
@@ -514,8 +549,8 @@ export class InventoryService {
       paramCount++;
       conditions.push(`(
         t.no ILIKE $${paramCount} OR 
-        p.name ILIKE $${paramCount} OR
-        t.type ILIKE $${paramCount}
+        t.type ILIKE $${paramCount} OR
+        p.name ILIKE $${paramCount}
       )`);
       values.push(`%${options.search}%`);
     }
@@ -530,12 +565,12 @@ export class InventoryService {
    * Build ORDER BY clause for transactions
    */
   private buildTransactionOrderClause(options: TransactionQueryOptions): string {
-    const sortBy = options.sort_by || 'created_at';
+    const sortBy = options.sort_by || 'date';
     const sortOrder = options.sort_order || 'DESC';
     
     // Validate sort_by field to prevent SQL injection
-    const allowedSortFields = ['no', 'product_name', 'type', 'date', 'created_at'];
-    const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'created_at';
+    const allowedSortFields = ['no', 'product_name', 'type', 'date'];
+    const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'date';
     let orderByField: string;
     
     switch (safeSortBy) {
@@ -543,7 +578,7 @@ export class InventoryService {
         orderByField = 't.no';
         break;
       case 'product_name':
-        orderByField = 'LOWER(p.name)';
+        orderByField = 'STRING_AGG(p.name, \', \')';
         break;
       case 'type':
         orderByField = 'LOWER(t.type)';
@@ -551,55 +586,12 @@ export class InventoryService {
       case 'date':
         orderByField = 't.date';
         break;
-      case 'created_at':
-        orderByField = 's.created_at';
-        break;
       default:
-        orderByField = 's.created_at';
+        orderByField = 't.date';
         break;
     }
     
     return `ORDER BY ${orderByField} ${sortOrder}`;
-  }
-
-  /**
-   * Get all transactions with search, sort, and pagination
-   */
-  async findTransactionList(options: TransactionQueryOptions = {}): Promise<PaginatedResult<Transaction>> {
-    try {
-      const page = options.page || 1;
-      const limit = options.limit || Number.MAX_SAFE_INTEGER;
-      const offset = (page - 1) * limit;
-
-      const { whereClause, values } = this.buildTransactionWhereClause(options);
-      const orderClause = this.buildTransactionOrderClause(options);
-
-      // Build final query
-      const baseQuery = inventoryQueries.findTransactionList;
-      const finalQuery = `${baseQuery} WHERE ${whereClause} ${orderClause} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
-
-      // Get total count for pagination
-      const countQuery = `${inventoryQueries.countAllTransactions} WHERE ${whereClause}`;
-      const countResult = await pool.query(countQuery, values);
-      const total = parseInt(countResult.rows[0].total);
-
-      // Get paginated results
-      const result = await pool.query(finalQuery, [...values, limit, offset]);
-      const transactions = result.rows.map(row => this.transformTransaction(row));
-
-      return {
-        data: transactions,
-        pagination: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit)
-        }
-      };
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      throw new HttpException(500, 'Internal server error while fetching transactions');
-    }
   }
 
   /**
@@ -663,6 +655,69 @@ export class InventoryService {
       }
       console.error('Error adjusting transaction:', error);
       throw new HttpException(500, 'Internal server error while adjusting transaction');
+    }
+  }
+
+
+  /**
+   * Get all transactions with search, sort, and pagination
+   */
+  async findTransactionList(options: TransactionQueryOptions = {}): Promise<PaginatedResult<Transaction>> {
+    try {
+      const page = options.page || 1;
+      const limit = options.limit || Number.MAX_SAFE_INTEGER;
+      const offset = (page - 1) * limit;
+
+      const { whereClause, values } = this.buildTransactionWhereClause(options);
+      const orderClause = this.buildTransactionOrderClause(options);
+
+      // Build final query
+      const baseQuery = inventoryQueries.findTransactionList;
+      const finalQuery = `${baseQuery} ${orderClause} LIMIT $1 OFFSET $2`;
+
+      // Get total count for pagination
+      const countQuery = inventoryQueries.countAllTransactions;
+      const countResult = await pool.query(countQuery);
+      const total = parseInt(countResult.rows[0].total);
+
+      // Get paginated results
+      const result = await pool.query(finalQuery, [limit, offset]);
+      const transactions = result.rows.map(row => this.transformTransaction(row));
+
+      return {
+        data: transactions,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      throw new HttpException(500, 'Internal server error while fetching transactions');
+    }
+  }
+
+  /**
+   * Get transaction detail
+   */
+  async findTransactionDetail(id: number): Promise<TransactionDetail> {
+    try {
+      const transactionResult = await pool.query(inventoryQueries.findTransactionDetail, [id]);
+      const itemsResult = await pool.query(inventoryQueries.findTransactionItems, [id]);
+
+      if (transactionResult.rows.length === 0) {
+        throw new HttpException(404, 'Transaction not found');
+      }
+
+      return this.transformTransactionDetail(transactionResult.rows[0], itemsResult.rows);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      console.error('Error fetching transaction detail:', error);
+      throw new HttpException(500, 'Internal server error while fetching transaction detail');
     }
   }
 } 

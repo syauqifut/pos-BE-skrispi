@@ -49,13 +49,6 @@ router.delete('/deleteProduct/:id', authenticateToken, inventoryController.delet
 router.delete('/deleteProduct', authenticateToken, inventoryController.deleteMultiple);
 
 /**
- * @route   GET /inventory/transactionList
- * @desc    Get all transactions
- * @access  Private (requires authentication)
- */
-router.get('/transactionList', authenticateToken, inventoryController.findTransactionList);
-
-/**
  * @route   POST /inventory/purchaseTransaction
  * @desc    Purchase transaction
  * @access  Private (requires authentication)
@@ -70,16 +63,32 @@ router.post('/purchaseTransaction', authenticateToken, inventoryController.purch
 router.post('/adjustmentTransaction', authenticateToken, inventoryController.adjustmentTransaction);
 
 /**
- * @route   POST /inventory/uploadProductImage/:id
+ * @route   POST /inventory/uploadProductImage
  * @desc    Upload product image
  * @access  Private (requires authentication)
  */
 router.post(
-  '/uploadProductImage/:id', 
+  '/uploadProductImage', 
   authenticateToken, 
   uploadProductImage.single('image'),
   handleUploadError,
   inventoryController.uploadProductImage
 );
+
+// inventory
+
+/**
+ * @route   GET /inventory/transactionList
+ * @desc    Get all transactions
+ * @access  Private (requires authentication)
+ */
+router.get('/transactionList', authenticateToken, inventoryController.findTransactionList);
+
+/**
+ * @route   GET /inventory/transactionDetail/:id
+ * @desc    Get transaction detail
+ * @access  Private (requires authentication)
+ */
+router.get('/transactionDetail/:id', authenticateToken, inventoryController.findTransactionDetail);
 
 export default router; 

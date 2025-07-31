@@ -166,36 +166,62 @@ export const inventoryQueries = {
     SELECT * FROM prices WHERE product_id = $1
   `,
 
-  // Find transaction list
-  findTransactionList: `
-    SELECT 
-      t.id,
-      t.no,
-      p.name as product_name,
-      t.type,
-      t.date,
-      s.description,
-      s.created_at,
-      u.name as created_by
-    FROM stocks s
-    LEFT JOIN transactions t ON s.transaction_id = t.id
-    LEFT JOIN products p ON s.product_id = p.id
-    LEFT JOIN users u ON s.created_by = u.id
-  `,
-
-  // Count total transactions for pagination
-  countAllTransactions: `
-    SELECT COUNT(*) as total
-    FROM stocks s
-    LEFT JOIN transactions t ON s.transaction_id = t.id
-    LEFT JOIN products p ON s.product_id = p.id
-    LEFT JOIN users u ON s.created_by = u.id
-  `,
-
   // Purchase transaction
   purchaseTransaction: `
     INSERT INTO stocks (product_id, transaction_id, type, qty, unit_id, description, created_by) 
     VALUES ($1, $2, $3, $4, $5, $6, $7) 
     RETURNING id
-  `
+  `,
+
+  // Find transaction list
+  findTransactionList: `
+    SELECT 
+      t.id,
+      t.no,
+      STRING_AGG(p.name, ', ') as product_name,
+      t.type,
+      t.date
+    FROM transactions t
+    LEFT JOIN transaction_items ti ON t.id = ti.transaction_id
+    LEFT JOIN products p ON ti.product_id = p.id
+    GROUP BY t.id, t.no, t.type, t.date
+  `,
+
+  // Count total transactions for pagination
+  countAllTransactions: `
+    SELECT COUNT(DISTINCT t.id) as total
+    FROM transactions t
+    LEFT JOIN transaction_items ti ON t.id = ti.transaction_id
+    LEFT JOIN products p ON ti.product_id = p.id
+  `,
+
+  // Find transaction detail
+  findTransactionDetail: `
+    SELECT 
+      t.id,
+      t.no,
+      t.type,
+      t.date,
+      t.description,
+      t.created_at,
+      t.created_by,
+      t.updated_at,
+      t.updated_by
+    FROM transactions t
+    WHERE t.id = $1
+  `,
+
+  // Find transaction items
+  findTransactionItems: `
+    SELECT 
+      ti.id,
+      ti.product_id,
+      p.name as product_name,
+      ti.unit_id,
+      ti.qty,
+      ti.description
+    FROM transaction_items ti
+    LEFT JOIN products p ON ti.product_id = p.id
+    WHERE ti.transaction_id = $1
+  `,
 }; 

@@ -11,7 +11,8 @@ import {
   purchaseTransactionSchema,
   adjustmentTransactionSchema,
   transactionQuerySchema,
-  deleteProductMultipleSchema
+  deleteProductMultipleSchema,
+  transactionDetailParamsSchema
 } from './validators/inventory.schema';
 
 // Extend Request interface to include file from multer
@@ -198,13 +199,10 @@ export class InventoryController {
   };
 
   /**
-   * Handle POST /inventory/uploadProductImage/:id
+   * Handle POST /inventory/uploadProductImage
    */
   uploadProductImage = async (req: RequestWithFile, res: Response, next: NextFunction): Promise<void> => {
     try {
-      // Validate path parameters with Zod
-      const validatedParams = productParamsSchema.parse(req.params);
-
       // Get user ID from auth middleware
       const userId = req.user?.userId;
       if (!userId) {
@@ -217,7 +215,6 @@ export class InventoryController {
       }
 
       const imageUrl = await this.inventoryService.uploadProductImage(
-        validatedParams.id, 
         req.file.filename, 
         userId
       );
@@ -228,6 +225,56 @@ export class InventoryController {
         data: {
           imageUrl
         }
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Handle POST /inventory/purchaseTransaction
+   */
+  purchaseTransaction = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validatedData = purchaseTransactionSchema.parse(req.body);
+
+      // Get user ID from auth middleware
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new HttpException(401, 'User authentication required');
+      }
+
+      const transactions = await this.inventoryService.purchaseTransaction(validatedData, userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Transactions retrieved successfully',
+        data: transactions
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Handle POST /inventory/adjustmentTransaction
+   */
+  adjustmentTransaction = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validatedData = adjustmentTransactionSchema.parse(req.body);
+
+      // Get user ID from auth middleware
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new HttpException(401, 'User authentication required');
+      }
+
+      const transactions = await this.inventoryService.adjustmentTransaction(validatedData, userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Transactions retrieved successfully',
+        data: transactions
       });
     } catch (error) {
       next(error);
@@ -279,49 +326,18 @@ export class InventoryController {
   };
 
   /**
-   * Handle POST /inventory/purchaseTransaction
+   * Handle GET /inventory/transactionDetail/:id
    */
-  purchaseTransaction = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findTransactionDetail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const validatedData = purchaseTransactionSchema.parse(req.body);
+      const validatedParams = transactionDetailParamsSchema.parse(req.params);
 
-      // Get user ID from auth middleware
-      const userId = req.user?.userId;
-      if (!userId) {
-        throw new HttpException(401, 'User authentication required');
-      }
-
-      const transactions = await this.inventoryService.purchaseTransaction(validatedData, userId);
+      const transaction = await this.inventoryService.findTransactionDetail(validatedParams.id);
 
       res.status(200).json({
         success: true,
-        message: 'Transactions retrieved successfully',
-        data: transactions
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  /**
-   * Handle POST /inventory/adjustmentTransaction
-   */
-  adjustmentTransaction = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const validatedData = adjustmentTransactionSchema.parse(req.body);
-
-      // Get user ID from auth middleware
-      const userId = req.user?.userId;
-      if (!userId) {
-        throw new HttpException(401, 'User authentication required');
-      }
-
-      const transactions = await this.inventoryService.adjustmentTransaction(validatedData, userId);
-
-      res.status(200).json({
-        success: true,
-        message: 'Transactions retrieved successfully',
-        data: transactions
+        message: 'Transaction detail retrieved successfully',
+        data: transaction
       });
     } catch (error) {
       next(error);
