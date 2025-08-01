@@ -3,6 +3,7 @@ import authRoutes from './modules/auth/auth.routes';
 import inventoryRoutes from './modules/inventory/inventory.routes';
 import cashierRoutes from './modules/cashier/cashier.routes';
 import reportRoutes from './modules/report/report.routes';
+import restockRecommendationRoutes from './modules/restockRecommendation/restockRecommendation.routes';
 
 const   router = Router();
 
@@ -17,6 +18,9 @@ router.use('/cashier', cashierRoutes);
 
 // Mount report routes
 router.use('/report', reportRoutes);
+
+// Mount restock recommendation routes
+router.use('/restock-recommendations', restockRecommendationRoutes);
 
 // Health check endpoint
 router.get('/health', (req, res) => {
@@ -61,6 +65,9 @@ router.get('/', (req, res) => {
         profit: 'GET /api/report/profit?date=YYYY-MM-DD',
         products: 'GET /api/report/products?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD',
         restock: 'GET /api/report/restock?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD',
+      },
+      restockRecommendations: {
+        list: 'GET /api/restock-recommendations/list?search=product&sort_by=estimated_days_left&order=asc',
       },
       health: 'GET /api/health'
     }
