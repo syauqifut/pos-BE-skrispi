@@ -116,6 +116,21 @@ export class CashierService {
       throw new Error('Total price mismatch');
     }
 
+    // check if stock for product is enough. then check if stock reduced by amount, total is not negative
+    for (const item of products) {
+      const product = dbProducts.find(p => p.id === item.id);
+      if (!product) {
+        throw new Error(`Product with ID ${item.id} not found`);
+      }
+      const stock = await pool.query(cashierQueries.getProductStock, [item.id]);
+      if (stock.rows[0].qty < item.qty) {
+        throw new Error(`Product with ID ${item.id} has insufficient stock`);
+      }
+      if (stock.rows[0].qty - item.qty < 0) {
+        throw new Error(`Product with ID ${item.id} has insufficient stock`);
+      }
+    }
+
     // Generate transaction number
     const todayCountResult = await pool.query(cashierQueries.getTodayTransactionCount);
     const todayCount = parseInt(todayCountResult.rows[0].count) + 1;

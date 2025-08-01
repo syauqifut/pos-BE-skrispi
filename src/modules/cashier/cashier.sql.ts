@@ -77,5 +77,12 @@ export const cashierQueries = {
     SELECT COUNT(*) as count
     FROM transactions
     WHERE type = 'sale' AND date = CURRENT_DATE
+  `,
+
+  // Get product stock
+  getProductStock: `
+    SELECT COALESCE(SUM(qty), 0) as qty
+    FROM stocks
+    WHERE product_id = $1
   `
 };
