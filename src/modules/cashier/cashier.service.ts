@@ -25,7 +25,7 @@ export class CashierService {
    * Get QRIS image static path
    */
   public getQrisPath(): string {
-    return '/qrispictures/qris.png';
+    return '/pictures/qris/qris.png';
   }
 
   /**

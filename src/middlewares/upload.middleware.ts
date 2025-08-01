@@ -12,8 +12,7 @@ if (!fs.existsSync(picturesDir)) {
 // Configure storage
 const storage = multer.diskStorage({
   destination: (req: Request, file: Express.Multer.File, cb) => {
-    const productId = req.params.id;
-    const productDir = path.join(picturesDir, productId.toString());
+    const productDir = path.join(picturesDir, 'products');
     
     // Create product-specific directory if it doesn't exist
     if (!fs.existsSync(productDir)) {
