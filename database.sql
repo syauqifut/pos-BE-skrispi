@@ -162,4 +162,33 @@ CREATE INDEX IF NOT EXISTS idx_transaction_items_unit_id ON transaction_items(un
 CREATE TRIGGER update_transactions_updated_at 
     BEFORE UPDATE ON transactions 
     FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- Push Notification Tables
+-- ============================================
+
+-- Create device_tokens table for FCM tokens
+CREATE TABLE IF NOT EXISTS device_tokens (
+    id SERIAL PRIMARY KEY,
+    token TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create index for better performance
+CREATE INDEX IF NOT EXISTS idx_device_tokens_token ON device_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_device_tokens_is_active ON device_tokens(is_active);
+
+-- Insert default device token record
+INSERT INTO device_tokens (id, token) 
+VALUES (1, 'd-1234567890') 
+ON CONFLICT (id) DO UPDATE SET 
+    token = EXCLUDED.token,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- Trigger to automatically update updated_at for device_tokens
+CREATE TRIGGER update_device_tokens_updated_at 
+    BEFORE UPDATE ON device_tokens 
+    FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column(); 

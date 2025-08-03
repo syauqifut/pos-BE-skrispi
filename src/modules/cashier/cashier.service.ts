@@ -1,5 +1,7 @@
+import { sendPushNotification } from '../../utils/pushNotification';
 import pool from '../../db';
 import { cashierQueries } from './cashier.sql';
+import { RestockRecommendationService } from '../restockRecommendation/restockRecommendation.service';
 
 interface ProductItem {
   id: number;
@@ -189,6 +191,23 @@ export class CashierService {
         paymentMethod: payment_method,
         message: 'Transaction completed successfully'
       };
+
+      const restockRecommendationService = new RestockRecommendationService();
+      const restockRecommendationList = await restockRecommendationService.getRestockRecommendationByProductIds(productIds.map(String));
+      const needRestockProducts = [];
+      for (const restockRecommendation of restockRecommendationList) {
+        const avgDays = Number(process.env.RESTOCK_AVG_DAYS || 0);
+        if (typeof restockRecommendation.estimated_days_left === 'number' && (restockRecommendation.estimated_days_left as number) < avgDays) {
+          needRestockProducts.push(restockRecommendation.product_name + ' (' + restockRecommendation.estimated_days_left + ' days left)');
+        }
+      }
+      if (needRestockProducts.length > 0) {
+        await sendPushNotification({
+          title: 'Restock Recommendation',
+          body: 'Product is running out of stock',
+          data: { needRestockProducts: needRestockProducts.join(', ') }
+        });
+      }
 
     } catch (error) {
       await client.query('ROLLBACK');

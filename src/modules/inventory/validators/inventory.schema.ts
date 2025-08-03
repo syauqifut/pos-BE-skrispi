@@ -27,7 +27,7 @@ export const updateProductSchema = z.object({
 // Schema for query parameters
 export const productQuerySchema = z.object({
   search: z.string().optional(),
-  category_id: z.string().transform((val) => parseInt(val)).pipe(z.number().int().positive()).optional(),
+  category_id: z.string().optional(),
   stock_qty: z.string().transform((val) => parseInt(val)).pipe(z.number().int().positive()).optional(),
   sort_by: z.enum(['name', 'barcode']).optional().default('name'),
   sort_order: z.enum(['ASC', 'DESC']).transform((val) => val.toUpperCase()).optional().default('ASC'),

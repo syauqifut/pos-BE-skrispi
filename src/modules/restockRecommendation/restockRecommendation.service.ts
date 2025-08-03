@@ -5,6 +5,7 @@ import { restockRecommendationQueries } from './restockRecommendation.sql';
 export interface RestockRecommendationItem {
   product_name: string;
   category_name: string;
+  image_url: string;
   unit: string;
   current_stock: number;
   estimated_days_left: string | number;
@@ -20,6 +21,7 @@ export interface ProductBasicInfo {
   product_id: string;
   product_name: string;
   category_name: string;
+  image_url: string;
   unit: string;
 }
 
@@ -27,6 +29,7 @@ export interface ProductWithStock {
   product_id: string;
   product_name: string;
   category_name: string;
+  image_url: string;
   unit: string;
   current_stock: number;
 }
@@ -35,6 +38,7 @@ export interface ProductWithSales {
   product_id: string;
   product_name: string;
   category_name: string;
+  image_url: string;
   unit: string;
   current_stock: number;
   total_sales: number;
@@ -80,11 +84,29 @@ export class RestockRecommendationService {
         product_id: row.product_id?.toString() || '',
         product_name: row.product_name || 'Unknown Product',
         category_name: row.category_name || 'Uncategorized',
+        image_url: row.image_url || '',
         unit: row.unit || 'pcs'
       }));
     } catch (error) {
       console.error('Error fetching active products:', error);
       throw new HttpException(500, 'Failed to fetch active products from database');
+    }
+  }
+
+  //get products by array id
+  private async getProductsByIds(productIds: string[]): Promise<ProductBasicInfo[]> {
+    try {
+      const result = await pool.query(restockRecommendationQueries.getProductsByIds, [productIds]);
+      return result.rows.map((row: any) => ({
+        product_id: row.product_id?.toString() || '',
+        product_name: row.product_name || 'Unknown Product',
+        category_name: row.category_name || 'Uncategorized',
+        image_url: row.image_url || '',
+        unit: row.unit || 'pcs'
+      }));
+    } catch (error) {
+      console.error('Error fetching products by ids:', error);
+      throw new HttpException(500, 'Failed to fetch products by ids');
     }
   }
 
@@ -179,6 +201,7 @@ export class RestockRecommendationService {
     return products.map(product => ({
       product_name: product.product_name,
       category_name: product.category_name,
+      image_url: product.image_url,
       unit: product.unit,
       current_stock: product.current_stock,
       estimated_days_left: this.calculateEstimatedDaysLeft(
@@ -270,5 +293,14 @@ export class RestockRecommendationService {
       console.error('Error fetching restock recommendations:', error);
       throw new HttpException(500, 'Failed to fetch restock recommendations');
     }
+  }
+
+  //get restock recommendation by array product id
+  async getRestockRecommendationByProductIds(productIds: string[]): Promise<RestockRecommendationItem[]> {
+    const avgDays = this.getAverageDays();
+    const products = await this.getProductsByIds(productIds);
+    const productsWithStock = await this.addStockToProducts(products);
+    const productsWithSales = await this.addSalesToProducts(productsWithStock, avgDays);
+    return this.transformToRestockRecommendations(productsWithSales, avgDays);
   }
 } 

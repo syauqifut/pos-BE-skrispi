@@ -140,3 +140,6 @@ logs
 public/uploads/
 public/pictures/
 public/*/
+
+# Firebase service account key
+serviceAccountKey.json

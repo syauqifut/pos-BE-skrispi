@@ -9,6 +9,7 @@ const inventoryController = new InventoryController();
 /**
  * @route   GET /inventory/listProduct
  * @desc    Get all products with search, filter, sort, and pagination
+ * @query   search, category_id, sort_by, sort_order, page, limit
  * @access  Public
  */
 router.get('/listProduct', authenticateToken, inventoryController.findAll);

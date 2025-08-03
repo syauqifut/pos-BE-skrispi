@@ -9,6 +9,7 @@ export const restockRecommendationQueries = {
       p.id as product_id,
       p.name as product_name,
       p.category_id as category_name,
+      p.image_url,
       p.unit_id as unit
     FROM products p
     WHERE p.is_active = true
@@ -37,9 +38,22 @@ export const restockRecommendationQueries = {
       p.id as product_id,
       p.name as product_name,
       p.category_id as category_name,
+      p.image_url,
       p.unit_id as unit
     FROM products p
     WHERE p.is_active = true 
     AND p.name ILIKE '%' || $1 || '%'
+  `,
+
+  // Get products with array id
+  getProductsByIds: `
+    SELECT 
+      p.id as product_id,
+      p.name as product_name,
+      p.category_id as category_name,
+      p.image_url,
+      p.unit_id as unit
+    FROM products p
+    WHERE p.is_active = true AND p.id = ANY($1)
   `
 }; 

@@ -45,7 +45,7 @@ export interface UpdateProductRequest {
 
 export interface FindAllOptions {
   search?: string;
-  category_id?: number;
+  category_id?: string;
   sort_by?: string;
   sort_order?: 'ASC' | 'DESC';
   page?: number;
