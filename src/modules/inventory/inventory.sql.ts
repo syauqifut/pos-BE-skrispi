@@ -17,17 +17,31 @@ export const inventoryQueries = {
       p.updated_at,
       p.created_by,
       p.updated_by,
-      SUM(s.qty) as stock_qty,
-      pr.purchase_price,
-      pr.selling_price
+      (
+        SELECT SUM(s.qty) 
+        FROM stocks s 
+        WHERE s.product_id = p.id
+      ) AS stock_qty,
+      (
+        SELECT pr.purchase_price 
+        FROM prices pr 
+        WHERE pr.product_id = p.id 
+        ORDER BY pr.updated_at DESC 
+        LIMIT 1
+      ) AS purchase_price,
+      (
+        SELECT pr.selling_price 
+        FROM prices pr 
+        WHERE pr.product_id = p.id 
+        ORDER BY pr.updated_at DESC 
+        LIMIT 1
+      ) AS selling_price
     FROM products p
-    LEFT JOIN stocks s ON p.id = s.product_id
-    LEFT JOIN prices pr ON p.id = pr.product_id
     WHERE p.is_active = true
-    GROUP BY p.id, p.name, p.barcode, p.image_url, p.is_active, p.category_id, p.unit_id, p.created_at, p.updated_at, p.created_by, p.updated_by, pr.purchase_price, pr.selling_price
+    GROUP BY p.id, p.name, p.barcode, p.image_url, p.is_active, p.category_id, p.unit_id, p.created_at, p.updated_at, p.created_by, p.updated_by
   `,
 
-  // Get product by ID with joins
+  // Get product by ID with subqueries for better performance
   findById: `
     SELECT 
       p.id,
@@ -41,14 +55,27 @@ export const inventoryQueries = {
       p.updated_at,
       p.created_by,
       p.updated_by,
-      SUM(s.qty) as stock_qty,
-      pr.purchase_price,
-      pr.selling_price
+      (
+        SELECT SUM(s.qty) 
+        FROM stocks s 
+        WHERE s.product_id = p.id
+      ) AS stock_qty,
+      (
+        SELECT pr.purchase_price 
+        FROM prices pr 
+        WHERE pr.product_id = p.id 
+        ORDER BY pr.updated_at DESC 
+        LIMIT 1
+      ) AS purchase_price,
+      (
+        SELECT pr.selling_price 
+        FROM prices pr 
+        WHERE pr.product_id = p.id 
+        ORDER BY pr.updated_at DESC 
+        LIMIT 1
+      ) AS selling_price
     FROM products p
-    LEFT JOIN stocks s ON p.id = s.product_id
-    LEFT JOIN prices pr ON p.id = pr.product_id
     WHERE p.id = $1 AND p.is_active = true
-    GROUP BY p.id, p.name, p.barcode, p.image_url, p.is_active, p.category_id, p.unit_id, p.created_at, p.updated_at, p.created_by, p.updated_by, pr.purchase_price, pr.selling_price
   `,
 
   // Create new product

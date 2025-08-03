@@ -661,8 +661,9 @@ export class InventoryService {
         if (item.quantity < 0) {
           throw new HttpException(400, 'Quantity cannot be less than 0');
         }
-        const negateStockResult = await pool.query(inventoryQueries.insertStock, [item.product_id, transactionId, 'adjustment', product.stock_qty * (-1), product.unit_id, data.description, userId]);
-        const stockResult = await pool.query(inventoryQueries.insertStock, [item.product_id, transactionId, 'adjustment', item.quantity, product.unit_id, data.description, userId]);
+
+        const qty = item.quantity - product.stock_qty;
+        const stockResult = await pool.query(inventoryQueries.insertStock, [item.product_id, transactionId, 'adjustment', qty, product.unit_id, data.description, userId]);
       }
       
       return transactionId;
