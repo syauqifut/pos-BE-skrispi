@@ -73,6 +73,18 @@ export const inventoryQueries = {
     RETURNING id
   `,
 
+  // Update price
+  updatePrice: `
+    UPDATE prices 
+    SET 
+      purchase_price = $2,
+      selling_price = $3,
+      updated_by = $4,
+      updated_at = NOW()
+    WHERE product_id = $1
+    RETURNING id
+  `,
+
   // Insert transaction
   insertTransaction: `
     INSERT INTO transactions (no, type, date, description, created_by, created_at) 

@@ -374,13 +374,27 @@ export class InventoryService {
       }
 
       if(productData.purchase_price && productData.selling_price) {
-        const priceResult = await pool.query(inventoryQueries.insertPrice, [
-          id,
-          productData.purchase_price,
-          productData.selling_price,
-          userId,
-          userId
-        ]);
+        // Check if price record exists for this product
+        const existingPriceResult = await pool.query(inventoryQueries.findPriceByProductId, [id]);
+        
+        if (existingPriceResult.rows.length > 0) {
+          // Update existing price
+          await pool.query(inventoryQueries.updatePrice, [
+            id,
+            productData.purchase_price,
+            productData.selling_price,
+            userId
+          ]);
+        } else {
+          // Insert new price
+          await pool.query(inventoryQueries.insertPrice, [
+            id,
+            productData.purchase_price,
+            productData.selling_price,
+            userId,
+            userId
+          ]);
+        }
       }
 
       const transactionNumber = await this.generateTransactionNumber('adjustment');
