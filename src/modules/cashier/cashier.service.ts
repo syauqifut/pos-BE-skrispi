@@ -184,14 +184,6 @@ export class CashierService {
 
       await client.query('COMMIT');
 
-      return {
-        transactionId,
-        transactionNo,
-        totalPrice: total_price,
-        paymentMethod: payment_method,
-        message: 'Transaction completed successfully'
-      };
-
       const restockRecommendationService = new RestockRecommendationService();
       const restockRecommendationList = await restockRecommendationService.getRestockRecommendationByProductIds(productIds.map(String));
       const needRestockProducts = [];
@@ -208,6 +200,14 @@ export class CashierService {
           data: { needRestockProducts: needRestockProducts.join(', ') }
         });
       }
+
+      return {
+        transactionId,
+        transactionNo,
+        totalPrice: total_price,
+        paymentMethod: payment_method,
+        message: 'Transaction completed successfully'
+      };
 
     } catch (error) {
       await client.query('ROLLBACK');
