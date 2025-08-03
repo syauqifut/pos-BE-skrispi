@@ -622,9 +622,12 @@ export class InventoryService {
         if (!product) {
           throw new HttpException(404, 'Product not found');
         }
-        if (item.quantity < product.stock_qty) {
-          throw new HttpException(400, 'Inserted quantity must be more than current stock for product ' + product.name);
+        
+        // Validate that quantity is positive
+        if (item.quantity <= 0) {
+          throw new HttpException(400, 'Quantity must be greater than 0 for product ' + product.name);
         }
+        
         const transactionItemResult = await pool.query(inventoryQueries.insertTransactionItem, [transactionId, item.product_id, product.unit_id, item.quantity, 'Purchase transaction']);
         const stockResult = await pool.query(inventoryQueries.insertStock, [item.product_id, transactionId, 'purchase', item.quantity, product.unit_id, 'Purchase transaction', userId]);
       }
@@ -658,7 +661,7 @@ export class InventoryService {
         if (item.quantity < 0) {
           throw new HttpException(400, 'Quantity cannot be less than 0');
         }
-        const negateStockResult = await pool.query(inventoryQueries.insertStock, [item.product_id, transactionId, 'adjustment', item.quantity * (-1), product.unit_id, data.description, userId]);
+        const negateStockResult = await pool.query(inventoryQueries.insertStock, [item.product_id, transactionId, 'adjustment', product.stock_qty * (-1), product.unit_id, data.description, userId]);
         const stockResult = await pool.query(inventoryQueries.insertStock, [item.product_id, transactionId, 'adjustment', item.quantity, product.unit_id, data.description, userId]);
       }
       
