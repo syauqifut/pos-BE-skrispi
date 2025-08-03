@@ -310,7 +310,7 @@ export class ReportService {
       const result = await pool.query(reportQueries.getPaymentMethods, [dateRange.startDate, dateRange.endDate]);
       
       const paymentMethods = result.rows.map((row: any) => ({
-        method: row.method || 'Cash',
+        method: row.method || 'cash',
         total: parseFloat(row.total || '0'),
         percent: 0 // Will be calculated below
       }));
@@ -326,7 +326,7 @@ export class ReportService {
       }
 
       // Ensure we have both Cash and QRIS methods
-      const methods = ['Cash', 'QRIS'];
+      const methods = ['cash', 'qris'];
       const finalMethods = methods.map(methodName => {
         const existing = paymentMethods.find(pm => pm.method === methodName);
         return existing || { method: methodName, total: 0, percent: 0 };
