@@ -211,6 +211,23 @@ export const inventoryQueries = {
       t.id,
       t.no,
       STRING_AGG(p.name, ', ') as product_name,
+      (
+        SELECT p2.image_url
+        FROM transaction_items ti2
+        LEFT JOIN products p2 ON ti2.product_id = p2.id
+        WHERE ti2.transaction_id = t.id
+        ORDER BY ti2.id ASC
+        LIMIT 1
+      ) as image_url,
+      CASE 
+        WHEN t.type = 'sale' THEN (
+          SELECT COALESCE(SUM(ti2.qty * prc.selling_price), 0)
+          FROM transaction_items ti2
+          LEFT JOIN prices prc ON ti2.product_id = prc.product_id
+          WHERE ti2.transaction_id = t.id
+        )
+        ELSE NULL
+      END as total_price,
       t.type,
       t.date
     FROM transactions t
