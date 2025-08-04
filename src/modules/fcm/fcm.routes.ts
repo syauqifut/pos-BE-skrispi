@@ -26,10 +26,10 @@ router.post('/saveToken', fcmController.saveFcmToken);
 router.get('/token', fcmController.getFcmToken);
 
 /**
- * @route   POST /fcm/send-notification
+ * @route   PUT /fcm/read-notification/:id
  * @desc    Update notification as read
  * @access  Public
  */
-router.post('/readNotification/:id', fcmController.readNotification);
+router.put('/readNotification/:id', fcmController.readNotification);
 
 export default router; 
