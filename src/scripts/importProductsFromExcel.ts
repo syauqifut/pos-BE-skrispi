@@ -130,7 +130,7 @@ async function saveData(productData: ProductData, transactionCounter: { value: n
 
             //2. save to table products [name, category, unit, barcode]
             const productName = name + ' - ' + type;
-            const productBarcode = generateBarcode(category, productName);
+            const productBarcode = generateBarcode(category, productName, type);
             const productResult = await client.query(
                 `INSERT INTO products (name, category_id, unit_id, barcode, created_by, updated_by)
                  VALUES ($1, $2, $3, $4, $5, $6)
@@ -190,11 +190,12 @@ async function saveData(productData: ProductData, transactionCounter: { value: n
 }
 
 //private function to generate barcode, take 4 chars from category + 4 chars from name + random 4 digits
-function generateBarcode(category: string, name: string) {
+function generateBarcode(category: string, name: string, type: string) {
     const catPart = (category || '').replace(/\s+/g, '').substring(0, 4).padEnd(4, 'X');
     const namePart = (name || '').replace(/\s+/g, '').substring(0, 4).padEnd(4, 'X');
+    const typePart = (type || '').replace(/\s+/g, '').substring(0, 4).padEnd(4, 'X');
     const randomPart = Math.floor(1000 + Math.random() * 9000).toString();
-    return (catPart + namePart + randomPart).replace(/\s+/g, '');
+    return (catPart + namePart + typePart + randomPart).replace(/\s+/g, '');
 }
 
 //simple function to generate unique transaction numbers for import
