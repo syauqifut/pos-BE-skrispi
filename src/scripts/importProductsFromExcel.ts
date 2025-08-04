@@ -189,9 +189,12 @@ async function saveData(productData: ProductData, transactionCounter: { value: n
     }
 }
 
-//private function to generate barcode, take from category + name + random number 4 digits
+//private function to generate barcode, take 4 chars from category + 4 chars from name + random 4 digits
 function generateBarcode(category: string, name: string) {
-    return category + name + Math.floor(1000 + Math.random() * 9000).toString();
+    const catPart = (category || '').replace(/\s+/g, '').substring(0, 4).padEnd(4, 'X');
+    const namePart = (name || '').replace(/\s+/g, '').substring(0, 4).padEnd(4, 'X');
+    const randomPart = Math.floor(1000 + Math.random() * 9000).toString();
+    return (catPart + namePart + randomPart).replace(/\s+/g, '');
 }
 
 //simple function to generate unique transaction numbers for import
