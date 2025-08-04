@@ -1,5 +1,5 @@
 import admin from './firebase';
-import pool from '../db';
+import { FcmService } from '../modules/fcm/fcm.service';
 import { HttpException } from '../exceptions/HttpException';
 
 type NotificationPayload = {
@@ -10,18 +10,22 @@ type NotificationPayload = {
 
 export const sendPushNotification = async ({ title, body, data }: NotificationPayload) => {
   try {
+    const fcmService = new FcmService();
+    
     // Get token from database
-    const tokenResult = await pool.query('SELECT token FROM device_tokens WHERE id = 1');
-    if (!tokenResult.rows[0]?.token) {
+    const token = await fcmService.getFcmToken();
+    if (!token) {
       throw new HttpException(404, 'No FCM token found in database');
     }
     
-    const token = tokenResult.rows[0].token;
     const message = {
       token,
       notification: { title, body },
       data: data || {},
     };
+
+    //save to database
+    await fcmService.saveNotification({ title, body, is_read: false });
 
     const response = await admin.messaging().send(message);
     console.log('✅ Push notification sent:', response);
@@ -51,26 +55,8 @@ export const sendPushNotification = async ({ title, body, data }: NotificationPa
   }
 };
 
-export const saveFcmToken = async (token: string) => {
-  if (!token) throw new HttpException(400, 'Token is required');
-  
-  try {
-    // Always update the token for id = 1
-    const result = await pool.query(
-      `UPDATE device_tokens SET token = $1, updated_at = NOW() WHERE id = 1 RETURNING *`,
-      [token]
-    );
-    
-    if (!result.rows[0]) {
-      throw new HttpException(404, 'Device token record not found');
-    }
-    
-    return result.rows[0];
-  } catch (error) {
-    if (error instanceof HttpException) throw error;
-    throw new HttpException(500, 'Failed to save FCM token');
-  }
-};
+// Export the FCM service for external use
+export { FcmService } from '../modules/fcm/fcm.service';
 
 export async function test() {
   try {

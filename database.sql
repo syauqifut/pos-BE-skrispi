@@ -192,3 +192,22 @@ CREATE TRIGGER update_device_tokens_updated_at
     BEFORE UPDATE ON device_tokens 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column(); 
+
+-- ============================================
+-- Notification Management Tables
+-- ============================================
+
+-- Create notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create index for better performance
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
+
+-- Trigger to automatically update updated_at for notifications

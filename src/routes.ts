@@ -4,7 +4,7 @@ import inventoryRoutes from './modules/inventory/inventory.routes';
 import cashierRoutes from './modules/cashier/cashier.routes';
 import reportRoutes from './modules/report/report.routes';
 import restockRecommendationRoutes from './modules/restockRecommendation/restockRecommendation.routes';
-import { saveFcmToken } from './utils/pushNotification';
+import fcmRoutes from './modules/fcm/fcm.routes';
 
 const   router = Router();
 
@@ -23,21 +23,8 @@ router.use('/report', reportRoutes);
 // Mount restock recommendation routes
 router.use('/restock-recommendations', restockRecommendationRoutes);
 
-
-router.post('/fcm-token', async (req, res) => {
-  const { token } = req.body;
-  if (!token) {
-    return res.status(400).json({ error: 'Token is required' });
-  }
-
-  try {
-    await saveFcmToken(token);
-    return res.json({ message: 'Token saved' });
-  } catch (err) {
-    console.error('Error saving FCM token:', err);
-    return res.status(500).json({ error: 'Failed to save token' });
-  }
-});
+// Mount FCM routes
+router.use('/fcm', fcmRoutes);
 
 // Health check endpoint
 router.get('/health', (req, res) => {
@@ -85,6 +72,12 @@ router.get('/', (req, res) => {
       },
       restockRecommendations: {
         list: 'GET /api/restock-recommendations/list?search=product&sort_by=estimated_days_left&order=asc',
+      },
+      fcm: {
+        notificationList: 'GET /api/fcm/notification-list',
+        saveToken: 'POST /api/fcm/save-token',
+        getToken: 'GET /api/fcm/token',
+        readNotification: 'POST /api/fcm/read-notification/:id'
       },
       health: 'GET /api/health'
     }
