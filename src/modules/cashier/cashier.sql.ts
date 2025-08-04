@@ -72,13 +72,6 @@ export const cashierQueries = {
     RETURNING id
   `,
 
-  // Get today's transaction count for generating transaction number
-  getTodayTransactionCount: `
-    SELECT COUNT(*) as count
-    FROM transactions
-    WHERE type = 'sale' AND date = CURRENT_DATE
-  `,
-
   // Get product stock
   getProductStock: `
     SELECT COALESCE(SUM(qty), 0) as qty

@@ -2,6 +2,7 @@ import { HttpException } from '../../exceptions/HttpException';
 import pool from '../../db';
 import { inventoryQueries } from './inventory.sql';
 import { AdjustmentTransactionRequest, PurchaseTransactionRequest } from './validators/inventory.schema';
+import { generateTransactionNumber } from '../../utils/transaction';
 
 export interface Product {
   id: number;
@@ -313,7 +314,7 @@ export class InventoryService {
         ]);
       }
 
-      const transactionNumber = await this.generateTransactionNumber('adjustment');
+      const transactionNumber = await generateTransactionNumber('adjustment');
 
       const transactionResult = await pool.query(inventoryQueries.insertTransaction, [
         transactionNumber, 'adjustment', new Date(), 'Initial stock for ' + productData.name, userId
@@ -397,7 +398,7 @@ export class InventoryService {
         }
       }
 
-      const transactionNumber = await this.generateTransactionNumber('adjustment');
+      const transactionNumber = await generateTransactionNumber('adjustment');
 
       const transactionResult = await pool.query(inventoryQueries.insertTransaction, [
         transactionNumber, 'adjustment', new Date(), 'Edit stock for ' + productData.name, userId
@@ -516,41 +517,6 @@ export class InventoryService {
   }
 
   /**
-   * Generate transaction number
-   */
-
-  async generateTransactionNumber(type: string): Promise<string> {
-    const client = await pool.connect();
-    try {
-      // 1. Tentukan prefix
-      const prefixMap: Record<string, string> = {
-        sale: 'SAL',
-        purchase: 'PUR',
-        adjustment: 'ADJ'
-      };
-      const prefix = prefixMap[type];
-      if (!prefix) throw new Error(`Unknown transaction type: ${type}`);
-  
-      // 2. Hitung jumlah transaksi hari ini dengan type yang sama
-      const result = await pool.query(inventoryQueries.countTodayTransactionsByType, [type]);
-      const count = parseInt(result.rows[0]?.count || '0', 10) + 1;
-  
-      // 3. Format tanggal dan counter
-      const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
-      const counterPart = count.toString().padStart(4, '0'); // 0001
-  
-      // 4. Gabungkan jadi nomor transaksi
-      const transactionNo = `${prefix}-${datePart}-${counterPart}`;
-      return transactionNo;
-    } catch (error) {
-      console.error('Error generating transaction number:', error);
-      throw new HttpException(500, 'Gagal membuat nomor transaksi');
-    } finally {
-      client.release();
-    }
-  }
-
-  /**
    * Build dynamic WHERE clause for transaction search and filters
    */
   private buildTransactionWhereClause(options: TransactionQueryOptions): { whereClause: string; values: any[] } {
@@ -613,7 +579,7 @@ export class InventoryService {
    */
   async purchaseTransaction(data: PurchaseTransactionRequest, userId: number): Promise<string> {
     try {
-      const transactionNumber = await this.generateTransactionNumber('purchase');
+      const transactionNumber = await generateTransactionNumber('purchase');
       const transactionResult = await pool.query(inventoryQueries.insertTransaction, [transactionNumber, 'purchase', new Date(), 'Purchase transaction', userId]);
       const transactionId = transactionResult.rows[0]?.id;
       
@@ -647,7 +613,7 @@ export class InventoryService {
    */
   async adjustmentTransaction(data: AdjustmentTransactionRequest, userId: number): Promise<string> {
     try {
-      const transactionNumber = await this.generateTransactionNumber('adjustment');
+      const transactionNumber = await generateTransactionNumber('adjustment');
       const transactionResult = await pool.query(inventoryQueries.insertTransaction, [transactionNumber, 'adjustment', new Date(), 'Adjustment transaction', userId]);
       const transactionId = transactionResult.rows[0]?.id;
       

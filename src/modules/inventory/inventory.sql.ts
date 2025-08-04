@@ -166,13 +166,6 @@ export const inventoryQueries = {
     WHERE p.is_active = true
   `,
 
-  // Count today transactions by type
-  countTodayTransactionsByType: `
-    SELECT COUNT(*) AS count
-    FROM transactions
-    WHERE type = $1 AND date = CURRENT_DATE
-  `,
-
   // Find stock history by product ID
   findStockHistoryByProductId: `
     SELECT 

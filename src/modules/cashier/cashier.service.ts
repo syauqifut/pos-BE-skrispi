@@ -2,6 +2,7 @@ import { sendPushNotification } from '../../utils/pushNotification';
 import pool from '../../db';
 import { cashierQueries } from './cashier.sql';
 import { RestockRecommendationService } from '../restockRecommendation/restockRecommendation.service';
+import { generateTransactionNumber } from '../../utils/transaction';
 
 interface ProductItem {
   id: number;
@@ -134,9 +135,7 @@ export class CashierService {
     }
 
     // Generate transaction number
-    const todayCountResult = await pool.query(cashierQueries.getTodayTransactionCount);
-    const todayCount = parseInt(todayCountResult.rows[0].count) + 1;
-    const transactionNo = `SALE${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${todayCount.toString().padStart(4, '0')}`;
+    const transactionNo = await generateTransactionNumber('sale');
 
     // Start transaction
     const client = await pool.connect();
