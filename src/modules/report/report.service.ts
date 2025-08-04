@@ -23,6 +23,16 @@ export interface DashboardData {
     image: string;
     sold: number;
   }>;
+  average_daily_sales: {
+    start_date: string;
+    end_date: string;
+    daily_sales: Array<{
+      date: string;
+      total_sales: number;
+      total_transactions: number;
+    }>;
+    average_sales: number;
+  };
 }
 
 export interface SalesData {
@@ -339,6 +349,84 @@ export class ReportService {
   }
 
   /**
+   * Get daily sales data for date range
+   */
+  private async getDailySalesData(dateRange: DateRange): Promise<Array<{ date: string; total_sales: number; total_transactions: number }>> {
+    try {
+      console.log('getDailySalesData called with dateRange:', dateRange);
+      const result = await pool.query(reportQueries.getDailySales, [dateRange.startDate, dateRange.endDate]);
+      console.log('getDailySalesData raw result:', result.rows);
+
+      const mappedData = result.rows.map((row: any) => ({
+        date: row.date,
+        total_sales: parseFloat(row.total_sales || '0'),
+        total_transactions: parseInt(row.total_transactions || '0', 10)
+      }));
+
+      return mappedData;
+    } catch (error) {
+      throw new HttpException(500, 'Failed to fetch daily sales data');
+    }
+  }
+
+  /**
+   * Fill in missing dates with zero values
+   */
+  private fillMissingDates(startDate: string, endDate: string, salesData: Array<{ date: string; total_sales: number; total_transactions: number }>): Array<{ date: string; total_sales: number; total_transactions: number }> {
+    const result: Array<{ date: string; total_sales: number; total_transactions: number }> = [];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Create a map for quick lookup of existing data
+    // Normalize dates to YYYY-MM-DD format for consistent comparison
+    const salesMap = new Map();
+    salesData.forEach(item => {
+      // Handle both Date objects and string dates
+      let dateStr: string;
+      if (typeof item.date === 'string') {
+        dateStr = item.date.split('T')[0];
+      } else {
+        dateStr = (item.date as Date).toISOString().split('T')[0];
+      }
+      salesMap.set(dateStr, {
+        ...item,
+        date: dateStr
+      });
+    });
+    
+    // Fill in missing dates
+    const currentDate = new Date(start);
+    while (currentDate <= end) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const existingData = salesMap.get(dateStr);
+      
+      if (existingData) {
+        result.push(existingData);
+      } else {
+        result.push({
+          date: dateStr,
+          total_sales: 0,
+          total_transactions: 0
+        });
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return result;
+  }
+
+  /**
+   * Calculate average sales from daily sales data
+   */
+  private calculateAverageSales(dailySales: Array<{ date: string; total_sales: number; total_transactions: number }>): number {
+    if (dailySales.length === 0) return 0;
+    
+    const totalSales = dailySales.reduce((sum, day) => sum + day.total_sales, 0);
+    return Math.round(totalSales / dailySales.length);
+  }
+
+  /**
    * Get dashboard data including all metrics
    */
   async getDashboardData(options: DashboardOptions = {}): Promise<DashboardData> {
@@ -348,12 +436,16 @@ export class ReportService {
       const comparisonRange = this.calculateComparisonDateRange(dateRange.startDate, dateRange.endDate);
 
       // Fetch all data in parallel for better performance
-      const [revenueData, transactionData, profitData, topProducts] = await Promise.all([
+      const [revenueData, transactionData, profitData, topProducts, dailySalesData] = await Promise.all([
         this.getRevenueData(dateRange, comparisonRange),
         this.getTransactionData(dateRange, comparisonRange),
         this.getProfitData(dateRange, comparisonRange),
-        this.getTopProducts(dateRange)
+        this.getTopProducts(dateRange),
+        this.getDailySalesData(dateRange)
       ]);
+      // Process daily sales data
+      const completeDailySales = this.fillMissingDates(dateRange.startDate, dateRange.endDate, dailySalesData);
+      const averageSales = this.calculateAverageSales(completeDailySales);
 
       // Calculate growth percentages
       const revenueGrowth = this.calculateGrowthPercentage(revenueData.current, revenueData.before);
@@ -376,7 +468,13 @@ export class ReportService {
           before: profitData.before,
           growth_percentage: profitGrowth
         },
-        top_products_current: topProducts
+        top_products_current: topProducts,
+        average_daily_sales: {
+          start_date: dateRange.startDate,
+          end_date: dateRange.endDate,
+          daily_sales: completeDailySales,
+          average_sales: averageSales
+        }
       };
     } catch (error) {
       if (error instanceof HttpException) {

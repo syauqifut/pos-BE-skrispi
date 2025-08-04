@@ -45,6 +45,18 @@ export const reportQueries = {
     LIMIT 10
   `,
 
+  // Get daily sales data aggregated by date
+  getDailySales: `
+    SELECT 
+      t.date as date,
+      COALESCE(SUM(t.total_amount), 0) as total_sales,
+      COUNT(*) as total_transactions
+    FROM transactions t
+    WHERE t.type = 'sale' AND t.date BETWEEN $1 AND $2
+    GROUP BY t.date
+    ORDER BY t.date ASC;
+  `,
+
   // Get revenue for comparison period (previous period of same length)
   getRevenueComparison: `
     SELECT COALESCE(SUM(t.total_amount), 0) as revenue
