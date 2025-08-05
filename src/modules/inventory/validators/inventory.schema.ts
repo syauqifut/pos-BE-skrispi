@@ -43,6 +43,7 @@ export const productParamsSchema = z.object({
 // Schema for transaction query parameters
 export const transactionQuerySchema = z.object({
   search: z.string().optional(),
+  type: z.enum(['sale', 'purchase', 'adjustment']).optional(),
   sort_by: z.enum(['no', 'product_name', 'type', 'date', 'created_at']).optional().default('created_at'),
   sort_order: z.enum(['ASC', 'DESC']).transform((val) => val.toUpperCase()).optional().default('DESC'),
   page: z.string().transform((val) => parseInt(val)).pipe(z.number().int().positive('Page must be a positive number')).optional(),

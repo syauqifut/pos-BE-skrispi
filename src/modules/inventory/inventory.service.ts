@@ -55,6 +55,7 @@ export interface FindAllOptions {
 
 export interface TransactionQueryOptions {
   search?: string;
+  type?: string;
   sort_by?: string;
   sort_order?: 'ASC' | 'DESC';
   page?: number;
@@ -531,6 +532,7 @@ export class InventoryService {
     // Search functionality
     if (options.search) {
       paramCount++;
+      // Search in transaction number, type, and product names
       conditions.push(`(
         t.no ILIKE $${paramCount} OR 
         t.type ILIKE $${paramCount} OR
@@ -539,8 +541,14 @@ export class InventoryService {
       values.push(`%${options.search}%`);
     }
 
+    if (options.type) {
+      paramCount++;
+      conditions.push(`t.type = $${paramCount}`);
+      values.push(options.type);
+    }
+
     return {
-      whereClause: conditions.length > 0 ? conditions.join(' AND ') : '1=1',
+      whereClause: conditions.length > 0 ? conditions.join(' AND ') : '',
       values
     };
   }
@@ -659,17 +667,28 @@ export class InventoryService {
       const { whereClause, values } = this.buildTransactionWhereClause(options);
       const orderClause = this.buildTransactionOrderClause(options);
 
-      // Build final query
+      // Build final query with where clause
       const baseQuery = inventoryQueries.findTransactionList;
-      const finalQuery = `${baseQuery} ${orderClause} LIMIT $1 OFFSET $2`;
+      let finalQuery = baseQuery;
+      
+      // Add WHERE clause if conditions exist
+      if (whereClause) {
+        finalQuery = `${baseQuery} WHERE ${whereClause}`;
+      }
+      
+      finalQuery = `${finalQuery} ${orderClause} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
 
-      // Get total count for pagination
-      const countQuery = inventoryQueries.countAllTransactions;
-      const countResult = await pool.query(countQuery);
+      // Get total count for pagination with where clause
+      let countQuery = inventoryQueries.countAllTransactions;
+      if (whereClause) {
+        countQuery = `${countQuery} WHERE ${whereClause}`;
+      }
+      const countResult = await pool.query(countQuery, values);
       const total = parseInt(countResult.rows[0].total);
 
       // Get paginated results
-      const result = await pool.query(finalQuery, [limit, offset]);
+      const paginatedValues = [...values, limit, offset];
+      const result = await pool.query(finalQuery, paginatedValues);
       const transactions = result.rows.map(row => this.transformTransaction(row));
 
       return {

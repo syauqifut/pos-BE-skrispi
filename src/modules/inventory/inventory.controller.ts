@@ -300,6 +300,10 @@ export class InventoryController {
         options.search = validatedQuery.search;
       }
 
+      if (validatedQuery.type) {
+        options.type = validatedQuery.type;
+      }
+
       if (validatedQuery.sort_by) {
         options.sort_by = validatedQuery.sort_by;
       }
