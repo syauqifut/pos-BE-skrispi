@@ -9,6 +9,8 @@ export interface RestockRecommendationItem {
   unit: string;
   current_stock: number;
   estimated_days_left: string | number;
+  restock_quantity: number;
+  is_need_restock: boolean;
 }
 
 export interface RestockRecommendationOptions {
@@ -49,12 +51,12 @@ export class RestockRecommendationService {
    * Get the number of days to calculate average sales from environment variable
    */
   private getAverageDays(): number {
-    const avgDays = process.env.RESTOCK_AVG_DAYS;
-    if (!avgDays) {
+    const bufferDays = process.env.RESTOCK_AVG_DAYS;
+    if (!bufferDays) {
       throw new HttpException(500, 'RESTOCK_AVG_DAYS environment variable is not configured');
     }
     
-    const days = parseInt(avgDays);
+    const days = parseInt(bufferDays);
     if (isNaN(days) || days <= 0) {
       throw new HttpException(500, 'RESTOCK_AVG_DAYS must be a positive number');
     }
@@ -126,9 +128,9 @@ export class RestockRecommendationService {
   /**
    * Fetch total sales for a specific product in the last N days
    */
-  private async fetchProductSales(productId: string, avgDays: number): Promise<number> {
+  private async fetchProductSales(productId: string, bufferDays: number): Promise<number> {
     try {
-      const result = await pool.query(restockRecommendationQueries.getProductSales, [productId, avgDays]);
+      const result = await pool.query(restockRecommendationQueries.getProductSales, [productId, bufferDays]);
       return parseInt(result.rows[0]?.total_sales || '0');
     } catch (error) {
       console.error(`Error fetching sales for product ${productId}:`, error);
@@ -156,11 +158,11 @@ export class RestockRecommendationService {
   /**
    * Add sales information to products
    */
-  private async addSalesToProducts(products: ProductWithStock[], avgDays: number): Promise<ProductWithSales[]> {
+  private async addSalesToProducts(products: ProductWithStock[], bufferDays: number): Promise<ProductWithSales[]> {
     const productsWithSales: ProductWithSales[] = [];
     
     for (const product of products) {
-      const totalSales = await this.fetchProductSales(product.product_id, avgDays);
+      const totalSales = await this.fetchProductSales(product.product_id, bufferDays);
       productsWithSales.push({
         ...product,
         total_sales: totalSales
@@ -173,18 +175,18 @@ export class RestockRecommendationService {
   /**
    * Calculate average sales per day
    */
-  private calculateAverageSales(totalSales: number, avgDays: number): number {
-    if (avgDays <= 0) {
+  private calculateAverageSales(totalSales: number, bufferDays: number): number {
+    if (bufferDays <= 0) {
       return 0;
     }
-    return totalSales / avgDays;
+    return totalSales / bufferDays;
   }
 
   /**
    * Calculate estimated days left based on current stock and average sales
    */
-  private calculateEstimatedDaysLeft(currentStock: number, totalSales: number, avgDays: number): string | number {
-    const averageSales = this.calculateAverageSales(totalSales, avgDays);
+  private calculateEstimatedDaysLeft(currentStock: number, totalSales: number, bufferDays: number): string | number {
+    const averageSales = this.calculateAverageSales(totalSales, bufferDays);
     
     if (averageSales === 0) {
       return 'Stock not decreasing';
@@ -194,22 +196,49 @@ export class RestockRecommendationService {
     return Math.round(estimatedDays * 10) / 10; // Round to 1 decimal place
   }
 
+  //calculate restock quantity
+  private calculateRestockQuantity(currentStock: number, totalSales: number, bufferDays: number): number {
+    const averageSales = this.calculateAverageSales(totalSales, bufferDays);
+    const targetStock = bufferDays * averageSales;
+    const restockQuantity = Math.round(targetStock - currentStock);
+    return restockQuantity > 0 ? restockQuantity : 0;
+  }
+
   /**
    * Transform products with sales data to restock recommendation items
+   * Adds is_restock: false if estimated_days_left is a string OR a number > bufferDays
    */
-  private transformToRestockRecommendations(products: ProductWithSales[], avgDays: number): RestockRecommendationItem[] {
-    return products.map(product => ({
-      product_name: product.product_name,
-      category_name: product.category_name,
-      image_url: product.image_url,
-      unit: product.unit,
-      current_stock: product.current_stock,
-      estimated_days_left: this.calculateEstimatedDaysLeft(
+  private transformToRestockRecommendations(products: ProductWithSales[], bufferDays: number): RestockRecommendationItem[] {
+    return products.map(product => {
+      const estimatedDaysLeft = this.calculateEstimatedDaysLeft(
         product.current_stock,
         product.total_sales,
-        avgDays
-      )
-    }));
+        bufferDays
+      );
+      let isNeedRestock = true;
+
+      if (typeof estimatedDaysLeft === 'string') {
+        isNeedRestock = false;
+      } else if (typeof estimatedDaysLeft === 'number' && estimatedDaysLeft >= bufferDays) {
+        isNeedRestock = false;
+      }
+
+      // continue if isNeedRestock is true
+      if (!isNeedRestock) {
+        return null;
+      }
+
+      return {
+        product_name: product.product_name,
+        category_name: product.category_name,
+        image_url: product.image_url,
+        unit: product.unit,
+        current_stock: product.current_stock,
+        estimated_days_left: estimatedDaysLeft,
+        restock_quantity: this.calculateRestockQuantity(product.current_stock, product.total_sales, bufferDays),
+        is_need_restock: isNeedRestock
+      };
+    }).filter(item => item !== null);
   }
 
   /**
@@ -267,7 +296,7 @@ export class RestockRecommendationService {
    */
   async getRestockRecommendations(options: RestockRecommendationOptions = {}): Promise<RestockRecommendationItem[]> {
     try {
-      const avgDays = this.getAverageDays();
+      const bufferDays = this.getAverageDays();
       const { search, sort_by, order } = options;
 
       // Step 1: Fetch all active products
@@ -277,10 +306,10 @@ export class RestockRecommendationService {
       const productsWithStock = await this.addStockToProducts(activeProducts);
 
       // Step 3: Add sales information to each product
-      const productsWithSales = await this.addSalesToProducts(productsWithStock, avgDays);
+      const productsWithSales = await this.addSalesToProducts(productsWithStock, bufferDays);
 
       // Step 4: Transform to restock recommendation items
-      const restockRecommendations = this.transformToRestockRecommendations(productsWithSales, avgDays);
+      const restockRecommendations = this.transformToRestockRecommendations(productsWithSales, bufferDays);
 
       // Step 5: Sort the recommendations
       const sortedRecommendations = this.sortProducts(restockRecommendations, sort_by, order);
@@ -297,10 +326,10 @@ export class RestockRecommendationService {
 
   //get restock recommendation by array product id
   async getRestockRecommendationByProductIds(productIds: string[]): Promise<RestockRecommendationItem[]> {
-    const avgDays = this.getAverageDays();
+    const bufferDays = this.getAverageDays();
     const products = await this.getProductsByIds(productIds);
     const productsWithStock = await this.addStockToProducts(products);
-    const productsWithSales = await this.addSalesToProducts(productsWithStock, avgDays);
-    return this.transformToRestockRecommendations(productsWithSales, avgDays);
+    const productsWithSales = await this.addSalesToProducts(productsWithStock, bufferDays);
+    return this.transformToRestockRecommendations(productsWithSales, bufferDays);
   }
 } 
