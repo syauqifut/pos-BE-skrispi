@@ -442,6 +442,7 @@ export class ReportService {
     try {
       // Parse date range
       const dateRange = this.parseDateRange(options);
+      const dateRangeDaily = this.parseDateRange(options, true);
       const comparisonRange = this.calculateComparisonDateRange(dateRange.startDate, dateRange.endDate);
 
       // Fetch all data in parallel for better performance
@@ -453,7 +454,7 @@ export class ReportService {
         this.getDailySalesData(dateRange)
       ]);
       // Process daily sales data
-      const completeDailySales = this.fillMissingDates(dateRange.startDate, dateRange.endDate, dailySalesData);
+      const completeDailySales = this.fillMissingDates(dateRangeDaily.startDate, dateRangeDaily.endDate, dailySalesData);
       const averageSales = this.calculateAverageSales(completeDailySales);
 
       // Calculate growth percentages
@@ -917,7 +918,6 @@ export class ReportService {
     try {
       // Parse date range
       const dateRange = this.parseDateRange(options);
-      const dateRangeDaily = this.parseDateRange(options, true);
       const comparisonRange = this.calculateComparisonDateRange(dateRange.startDate, dateRange.endDate);
 
       // Fetch all data in parallel for better performance
@@ -925,7 +925,7 @@ export class ReportService {
         this.getTopProductsForRange(dateRange),
         this.getTopProductsForComparison(comparisonRange),
         this.getSalesByCategory(dateRange),
-        this.getTotalSalesCount(dateRangeDaily),
+        this.getTotalSalesCount(dateRange),
         this.getLowStockProducts()
       ]);
 
