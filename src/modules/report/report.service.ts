@@ -162,9 +162,18 @@ export class ReportService {
   /**
    * Parse and validate date range
    */
-  private parseDateRange(options: DashboardOptions): DateRange {
+  private parseDateRange(options: DashboardOptions, isDashboard: boolean = false): DateRange {
     let startDate: string;
     let endDate: string;
+
+    // if dashboard, startdate is 7 days ago, enddate is today
+    if (isDashboard) {
+      const today = new Date().toISOString().split('T')[0];
+      const sevenDaysAgo = new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0];
+      startDate = sevenDaysAgo;
+      endDate = today;
+      return { startDate, endDate };
+    }
 
     if (options.startDate && options.endDate) {
       // Custom date range provided
@@ -908,6 +917,7 @@ export class ReportService {
     try {
       // Parse date range
       const dateRange = this.parseDateRange(options);
+      const dateRangeDaily = this.parseDateRange(options, true);
       const comparisonRange = this.calculateComparisonDateRange(dateRange.startDate, dateRange.endDate);
 
       // Fetch all data in parallel for better performance
@@ -915,7 +925,7 @@ export class ReportService {
         this.getTopProductsForRange(dateRange),
         this.getTopProductsForComparison(comparisonRange),
         this.getSalesByCategory(dateRange),
-        this.getTotalSalesCount(dateRange),
+        this.getTotalSalesCount(dateRangeDaily),
         this.getLowStockProducts()
       ]);
 
