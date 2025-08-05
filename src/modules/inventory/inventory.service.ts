@@ -673,7 +673,15 @@ export class InventoryService {
       
       // Add WHERE clause if conditions exist
       if (whereClause) {
-        finalQuery = `${baseQuery} WHERE ${whereClause}`;
+        // Insert WHERE clause before GROUP BY
+        const groupByIndex = baseQuery.lastIndexOf('GROUP BY');
+        if (groupByIndex !== -1) {
+          const beforeGroupBy = baseQuery.substring(0, groupByIndex).trim();
+          const afterGroupBy = baseQuery.substring(groupByIndex);
+          finalQuery = `${beforeGroupBy} WHERE ${whereClause} ${afterGroupBy}`;
+        } else {
+          finalQuery = `${baseQuery} WHERE ${whereClause}`;
+        }
       }
       
       finalQuery = `${finalQuery} ${orderClause} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;

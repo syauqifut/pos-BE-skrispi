@@ -80,7 +80,7 @@ CREATE TRIGGER update_products_updated_at
 -- Inventory Tables
 -- ============================================
 
--- Create conversions table
+-- Create prices table
 CREATE TABLE IF NOT EXISTS prices (
   id SERIAL PRIMARY KEY,
   product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
@@ -110,9 +110,9 @@ CREATE TABLE IF NOT EXISTS stocks (
   created_by INTEGER REFERENCES users(id)
 );
 
--- Trigger to automatically update updated_at for conversions
-CREATE TRIGGER update_conversions_updated_at 
-    BEFORE UPDATE ON conversions 
+-- Trigger to automatically update updated_at for prices
+CREATE TRIGGER update_prices_updated_at 
+    BEFORE UPDATE ON prices 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
@@ -178,7 +178,6 @@ CREATE TABLE IF NOT EXISTS device_tokens (
 
 -- Create index for better performance
 CREATE INDEX IF NOT EXISTS idx_device_tokens_token ON device_tokens(token);
-CREATE INDEX IF NOT EXISTS idx_device_tokens_is_active ON device_tokens(is_active);
 
 -- Insert default device token record
 INSERT INTO device_tokens (id, token) 
