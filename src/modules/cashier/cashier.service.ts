@@ -194,8 +194,8 @@ export class CashierService {
       }
       if (needRestockProducts.length > 0) {
         await sendPushNotification({
-          title: 'Restock Recommendation',
-          body: 'Product is running out of stock',
+          title: 'Stok Hampir Habis',
+          body: 'Stok untuk produk ' + needRestockProducts.join(', ') + ' hampir habis. Silakan restock',
           data: { needRestockProducts: needRestockProducts.join(', ') }
         });
       }
