@@ -144,7 +144,7 @@ export class InventoryService {
       product_name: row.product_name,
       total_items: row.total_items,
       image_url: row.image_url,
-      total_amount: row.total_amount,
+      total_amount: row.total_price,
       type: row.type,
       date: row.date
     };
