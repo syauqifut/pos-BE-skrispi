@@ -210,7 +210,8 @@ export const inventoryQueries = {
     SELECT 
       t.id,
       t.no,
-      STRING_AGG(p.name, ', ') as product_name,
+      MIN(p.name) as product_name,
+      COUNT(DISTINCT p.id) as total_items,
       (
         SELECT p2.image_url
         FROM transaction_items ti2

@@ -76,6 +76,7 @@ export interface Transaction {
   id: number;
   no: string;
   product_name: string;
+  total_items: number;
   image_url: string;
   total_amount: number;
   type: string;
@@ -141,6 +142,7 @@ export class InventoryService {
       id: row.id,
       no: row.no,
       product_name: row.product_name,
+      total_items: row.total_items,
       image_url: row.image_url,
       total_amount: row.total_amount,
       type: row.type,
