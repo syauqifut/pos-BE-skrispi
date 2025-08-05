@@ -340,7 +340,7 @@ export class InventoryService {
         'adjustment',
         productData.stock_qty,
         productData.unit_id,
-        'Initial stock for ' + productData.name,
+        'Initial stock for ' + productData.name + ' from create product',
         userId
       ]);
 
@@ -422,23 +422,14 @@ export class InventoryService {
         throw new HttpException(400, 'Stock quantity cannot be less than 0');
       }
 
-      const negateStockResult = await pool.query(inventoryQueries.insertStock, [
+      const qty = (productData.stock_qty ?? 0) - (currentProduct.stock_qty ?? 0);
+      const stockResult = await pool.query(inventoryQueries.insertStock, [
         id,
         transactionId,
         'adjustment',
-        currentProduct.stock_qty * (-1),
+        qty,
         productData.unit_id,
-        'Edit stock for ' + productData.name,
-        userId
-      ]);
-
-      const addStockResult = await pool.query(inventoryQueries.insertStock, [
-        id,
-        transactionId,
-        'adjustment',
-        productData.stock_qty,
-        productData.unit_id,
-        'Edit stock for ' + productData.name,
+        'Edit stock for ' + productData.name + ' from edit product',
         userId
       ]);
 
