@@ -18,6 +18,12 @@ export interface LoginResponse {
     username: string;
     name: string;
     role: string;
+    store_info: {
+      name: string;
+      address: string;
+      phone: string;
+      email: string;
+    };
   };
 }
 
@@ -77,7 +83,13 @@ export class AuthService {
           id: user.id,
           username: user.username,
           name: user.name,
-          role: user.role
+          role: user.role,
+          store_info: {
+            name: process.env.STORE_NAME || '',
+            address: process.env.STORE_ADDRESS || '',
+            phone: process.env.STORE_PHONE || '',
+            email: process.env.STORE_EMAIL || ''
+          }
         }
       };
     } catch (error) {
