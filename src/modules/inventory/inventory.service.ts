@@ -77,7 +77,7 @@ export interface Transaction {
   no: string;
   product_name: string;
   image_url: string;
-  total_price: number;
+  total_amount: number;
   type: string;
   date: Date;
 }
@@ -86,6 +86,8 @@ export interface TransactionItem {
   id: number;
   product_id: number;
   product_name: string;
+  price: number;
+  image_url: string;
   unit_id: string;
   qty: number;
   description: string;
@@ -97,6 +99,9 @@ export interface TransactionDetail {
   type: string;
   date: Date;
   description: string;
+  payment_type: string;
+  total_amount: number;
+  total_items: number;
   created_at: Date;
   created_by: number;
   updated_at: Date;
@@ -137,7 +142,7 @@ export class InventoryService {
       no: row.no,
       product_name: row.product_name,
       image_url: row.image_url,
-      total_price: row.total_price,
+      total_amount: row.total_amount,
       type: row.type,
       date: row.date
     };
@@ -150,6 +155,9 @@ export class InventoryService {
       type: transactionRow.type,
       date: transactionRow.date,
       description: transactionRow.description,
+      payment_type: transactionRow.payment_type,
+      total_amount: transactionRow.total_amount,
+      total_items: itemsRows.length,
       created_at: transactionRow.created_at,
       created_by: transactionRow.created_by,
       updated_at: transactionRow.updated_at,
@@ -158,6 +166,8 @@ export class InventoryService {
         id: item.id,
         product_id: item.product_id,
         product_name: item.product_name,
+        price: item.price * item.qty,
+        image_url: item.image_url,
         unit_id: item.unit_id,
         qty: item.qty,
         description: item.description

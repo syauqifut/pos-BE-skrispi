@@ -91,5 +91,6 @@ router.get('/transactionList', authenticateToken, inventoryController.findTransa
  * @access  Private (requires authentication)
  */
 router.get('/transactionDetail/:id', authenticateToken, inventoryController.findTransactionDetail);
+//tambahin image_url tiap produk, metode pembayaran, total pembayaran
 
 export default router; 

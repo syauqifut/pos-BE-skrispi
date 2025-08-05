@@ -255,7 +255,9 @@ export const inventoryQueries = {
       t.created_at,
       t.created_by,
       t.updated_at,
-      t.updated_by
+      t.updated_by,
+      t.payment_type,
+      t.total_amount
     FROM transactions t
     WHERE t.id = $1
   `,
@@ -266,11 +268,14 @@ export const inventoryQueries = {
       ti.id,
       ti.product_id,
       p.name as product_name,
+      p.image_url,
       ti.unit_id,
       ti.qty,
-      ti.description
+      ti.description,
+      pr.selling_price as price
     FROM transaction_items ti
     LEFT JOIN products p ON ti.product_id = p.id
+    LEFT JOIN prices pr ON ti.product_id = pr.product_id
     WHERE ti.transaction_id = $1
   `,
 }; 
